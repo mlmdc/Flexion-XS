@@ -1,124 +1,134 @@
-# FLEXION XS - DEV
+<div align="center">
 
-Ce git est destiné au développement du projet de réglette en flexion du module CMV, pour le semestre 2024P.
+# Flexion XS
 
-## Reprise du projet
+**FR — Mesurer les vibrations d’une réglette en flexion et confronter les fréquences et modes observés à un modèle mécanique.**
 
-Les documents dans ce dossier rendent compte du travail technique effectué pendant le semestre 2024P. La partie mécanique vibratoire, coeur de ce projet, est abordée dans le cours de mécanique de M. Helbert.
-Nous vous proposons ce plan pour reprendre et comprendre ce projet de **Flexion XS**:
+**EN — Measure the vibrations of a bending beam and compare its observed frequencies and mode shapes with a mechanical model.**
 
-1. Aller dans **/0_Documents** et lire le tutoriel. Ce dernier explique comment effectuer une mesure en partant de rien.
-2. En parallèle du tutoriel, regardez les vidéos dans **/4_Medias/Videos**.
-3. Essayez de faire le lien entre les vidéos et le tutoriel écrit. En effet, associer le résultat avec l'explication vous permettra d'associer les principes de la maquette (conception, code, ect..) tel que nous l'avons formulé dans ce dossier.
-4. Essayez d'effectuer une mesure (mesure en régime libre/relacher la reglette est de loin le + simple) avec le code **serial_com.ipynb** et le projet STM32CubeIDE **/REGLETTE_Workspace**.
-Les problèmes d'installations vont alors apparaître. **N'essayez pas de changer quelque chose dans le code ou sur la maquette avant d'arriver à mesurer, vous ne feriez que vous tirer une balle dans le pied pour la suite du semestre**. Réparez les erreurs vous permettra d'apprendre le projet.
+[Retour au portfolio / Back to portfolio](https://github.com/mlmdc) · [Sommaire / Contents](#sommaire--contents) · [Tutoriel de mesure / Measurement guide](0_Documents/Sources/tutoriel.md) · [Projet STM32](REGLETTE_CMV/REGLETTE_CMV.ioc) · [Analyse modale / Modal analysis](5_Post-traitements/1_Libre/analyse_modale_flexion_vfinal.ipynb)
 
-A partir du moment où la mesure est réussie, il est temps de passer à l'évolution du projet:
+![Montage expérimental Flexion XS : réglette, moteur et électronique de mesure](4_Medias/Photos/montage_moteur_sans_reducteur.jpg)
 
-5. Découvrez les choix de conceptions effectués dans **/Documents/2_listes_des_taches.pdf**, dans **/1_Documentation_codes**, dans **/2_Conception_electronique** et dans **/3_Conception_Mecanique**.
+</div>
 
-6. Nous avons pensé aux évolutions possibles dans le document *3_Perspectives.pdf*. En conjonction avec *erreurs_projet.ods*, cela vous donnera les pistes pour faire évoluer le projet, tant dans la résolution de problèmes que dans l'amélioration continue.
+## Sommaire / Contents
 
-7. Le plus gros du travail à améliorer est dans le post-traitement. Les analyses que nous avons pu faire on été pour nous corrects, mais se sont en fait révélés insuffisants pour des calculs plutôt précis.
+- [Présentation / Overview](#présentation--overview)
+- [Problématique et approche / Problem & approach](#problématique-et-approche--problem--approach)
+- [Choix techniques / Technical decisions](#choix-techniques--technical-decisions)
+- [Résultats et apprentissages / Results & learnings](#résultats-et-apprentissages--results--learnings)
+- [Démarrage / Getting started](#démarrage--getting-started)
+- [Organisation du dépôt / Repository layout](#organisation-du-dépôt--repository-layout)
 
-Documents pour aider :
+## Présentation / Overview
 
-* **/Medias/Photos** fourre-tout de photos. Des photos de la maquette en état de fonctionnement, des photos de courbes et autres, ces médias sont là pour aider à la compréhension.
+### Français
 
-* **/2_Conception_electronique** contient les fichiers qui ont été réalisés dans la partie électronique mais ne traite pas de la partie intégration physique.
+Flexion XS est une plateforme expérimentale pédagogique consacrée aux vibrations d’une réglette assimilée à une poutre. Une carte STM32 acquiert l’accélération d’un accéléromètre analogique et la vitesse d’un moteur ; un programme Python permet de commander la maquette et de recevoir les mesures. Les notebooks exploitent ensuite des mesures en plusieurs points pour étudier les fréquences propres, les formes modales et l’amortissement, et les comparer à un modèle de poutre.
 
-* **/3_Conception_Mecanique** contient les fichiers de CAO (assemblage et pièces, fichiers d'impressions 3D).
+Le dépôt s’adresse aux étudiants et aux personnes qui reprennent le projet : il rassemble le firmware, l’outil de mesure, des données, des analyses et les documents de conception. Une acquisition en direct nécessite la maquette et sa carte STM32.
 
-## Organisation
+### English
 
-Le git, ainsi que les documents, sont organisés selon leurs fonctions.
+Flexion XS is an educational experimental platform for studying the vibrations of a beam-like strip. An STM32 board samples an analog accelerometer and reads motor speed; a Python program controls the rig and receives measurements. Notebooks then use measurements taken at several positions to study natural frequencies, mode shapes and damping, and compare them with a beam model.
 
-### Documentations
+The repository is intended for students and project maintainers. It contains the firmware, measurement tools, sample data, analysis notebooks and design documents. Live acquisition requires the physical rig and its STM32 board.
 
-Le dossier **/Documentation** contient les fichiers de documentation de code réalisé pendant le semestre.
-L'idée de ces documentations est d'aider à la compréhension, au-delà de ce que la simple lecture permet de déceler.
-Parmis tous les fichiers, il faut regarder 2 documents :
+### Fonctionnalités / Features
 
-* **stm32_code.html** traite du code utilisé sur la STM32. Elle est découpée selon les modules (fichiers en .c) utilisés sur la carte. Compte tenu de la complexité du langage C, lire et relire les passages est pertinent pour ne pas déregler le code. **Il est conseillé de changer au minimum le code** pour ne pas rendre le code non maintenable.
-Pour mettre à jour la documentation, il faut convertir le document en .md en .html.
+- **FR :** acquisition de l’accélération et de la vitesse du moteur ; commandes série pour la maquette ; export des mesures ; analyses des régimes libre et harmonique.
+- **EN:** accelerometer and motor-speed acquisition; serial commands for the rig; measurement export; free-response and harmonic-analysis notebooks.
 
-* **stm32_***com***.html** traite du code en python côté PC. L'objectif est de commander la carte STM32 tout en lisant les données renvoyées par la carte. Une bonne partie n'est pas destinée à la modification.
+## Problématique et approche / Problem & approach
 
-### Documents
+### Français
 
-**/Documents** contient les documents comme le tutoriel et autres. La source des documents (en .md) ainsi que les images utilisées sont aussi fournies, dans le but de pouvoir modifier les documents pendant les autres semestres.
+L’objectif est de caractériser la réponse vibratoire d’une réglette instrumentée, puis de confronter les observations à un modèle mécanique. Une mesure doit associer l’évolution temporelle de l’accélération aux positions d’observation et, en régime forcé, à l’excitation produite par le moteur. La chaîne mise en place va du capteur analogique à la STM32, puis à l’enregistrement Python et au post-traitement hors ligne.
 
-**/Sources** contient les sources des documents de Tutoriel.pdf et Perspectives.pdf, ainsi que les images sources utilisées pour agrémenter visuellement les documents.
-Si vous souhaitez produire un document, mettez vous dans ce répertoire et générez par commande les .pdf.
-L'idée de séparer le produit d'arrivée de sa source est pour ne pas mélanger les travaux déjà effectués de ceux qui n'ont pas été encore effectués.
+Pour le régime libre, les notebooks calculent les réponses fréquentielles à partir des mesures d’accélération et estiment les fréquences et amortissements modaux, notamment par sélection de pics à −3 dB et ajustement de cercles. Les formes modales expérimentales sont comparées à celles d’un modèle éléments finis de poutre, avec notamment un critère MAC. Un notebook distinct étudie la réponse harmonique par superposition modale.
 
-### Measurements
+### English
 
-Le dossier **/Measurements** est destiné au partage entre notebooks des mesures.
-**Ne pas modifier le nom du dossier sans prendre en compte la modification dans le code**.
-**Ne pas supprimer le répertoire si vous souhaitez faire du post-traitement**.
+The aim is to characterize the vibration response of an instrumented beam and compare the observations with a mechanical model. A measurement must relate acceleration over time to the observation positions and, in forced response, to the excitation generated by the motor. The implemented chain runs from the analog sensor through the STM32 to Python recording and offline analysis.
 
-### Post-traitements
+For free response, the notebooks derive frequency-response functions from acceleration measurements and estimate modal frequencies and damping, including peak picking at −3 dB and circle fitting. Experimental mode shapes are compared with those from a finite-element beam model, including with the Modal Assurance Criterion (MAC). A separate notebook studies harmonic response using modal superposition.
 
-**/Post-traitements** contient les notebooks de post-traitements, avec un rangement par type de mesures.
-Au lieu de versionnage par git, le versionnage est fait en copiant les documents et en les modifiant.
-L'objectif est de garder les précedentes modifications pour réutilisations ultérieures.
+## Choix techniques / Technical decisions
 
-### Medias
+### Français
 
-Ce répertoire contient les médias photos et vidéos qui vous permettront de vous situer et de comprendre le projet.
+- **STM32F411 et HAL en C :** la carte regroupe l’acquisition ADC, l’encodeur moteur, la commande PWM et la liaison série. Le DMA et les interruptions périodiques limitent le travail bloquant pendant l’acquisition.
+- **Accéléromètre analogique et encodeur :** ils permettent d’observer la réponse de la réglette et la vitesse d’excitation avec l’électronique disponible. L’acquisition actuelle repose sur un seul canal d’accéléromètre.
+- **UART à 921600 bauds et trames texte :** le format délimité facilite l’inspection et l’exploitation depuis Python. Ce choix simple impose toutefois une charge de transmission et une synchronisation à surveiller.
+- **Python, NumPy, SciPy et notebooks :** séparer la mesure du post-traitement permet d’explorer les méthodes sans modifier le firmware. Les analyses gardent des plages de sélection et paramètres manuels ; elles ne constituent donc pas un pipeline entièrement automatisé.
+- **Modèle éléments finis :** les notebooks utilisent un modèle de poutre d’Euler–Bernoulli discrétisé, utile pour confronter fréquences et formes modales, mais qui repose sur des hypothèses simplificatrices par rapport à la maquette réelle.
 
-**/Photos**, comme son nom l'indique, est le lieu de toutes les photos. Celles-ci vont de l'illustration de diaporama à des photos de la maquette.
+### English
 
-**/Videos** est lui pour les vidéos tutoriels.
+- **STM32F411 and C HAL:** the board handles ADC acquisition, the motor encoder, PWM control and serial communication. DMA and periodic interrupts reduce blocking work during acquisition.
+- **Analog accelerometer and encoder:** these components measure the beam response and excitation speed using the available electronics. The current acquisition uses a single accelerometer channel.
+- **921600-baud UART and text frames:** delimited values are straightforward to inspect and process in Python, at the cost of transmission overhead and synchronization constraints.
+- **Python, NumPy, SciPy and notebooks:** separating acquisition from post-processing allows analysis methods to be explored without changing the firmware. The analyses use manually selected ranges and parameters, so they are not a fully automated pipeline.
+- **Finite-element model:** the notebooks use a discretized Euler–Bernoulli beam model to compare frequencies and mode shapes. It simplifies the physical rig and its boundary conditions.
 
-### REGLETTE_Workspace
+## Résultats et apprentissages / Results & learnings
 
-Dossier workspace pour STM32CubeIDE. Ne modifier que dans STM32CubeIDE.
+### Français
 
-### Conception mécanique
+Le dépôt contient trois séries de mesures (`P1FRF.csv`, `P2FRF.csv`, `P3FRF.csv`) et des notebooks qui produisent des réponses fréquentielles et des comparaisons modales. Les fichiers documentent une chaîne expérimentale et des méthodes d’analyse utilisables comme base de travail ; ils ne suffisent pas, à eux seuls, à établir une validation quantitative du modèle ou une précision générale des estimations.
 
-Ce répertoire contient :
+Les documents du projet signalent plusieurs limites encore ouvertes : le troisième mode en régime libre reste à mieux identifier, l’ajustement des cercles et le traitement doivent gagner en répétabilité, et des problèmes d’intégration électrique (notamment de masses) compliquent l’utilisation de la maquette. Le firmware et le protocole série nécessitent également une vérification avant de considérer l’acquisition comme robuste. Les évolutions proposées comprennent la fiabilisation du câblage et de la communication, une acquisition multi-capteurs et des essais répétés avec paramètres et conditions consignés.
 
-* /"Impression 3D" contient les fichiers .stl réalisés, par exemple le support d'acceleromètre.
+### English
 
-* /"LETTRE 7 ET 8" contient les .CATPart (sans assemblage) des lettres 7 & 8 utilisées pour le nouveau balisage.
+The repository includes three measurement series (`P1FRF.csv`, `P2FRF.csv`, `P3FRF.csv`) and notebooks that compute frequency responses and compare mode shapes. They document an experimental workflow and analysis methods that can be extended; by themselves, they do not establish quantitative model validation or general accuracy of the estimates.
 
-* / a l'assemblage de la maquette ainsi que les parties utilisées. En parallèle, la caractérisation du moteur et de son filtre est donné.
+The project documents identify open limitations: the third free-response mode needs better identification, circle fitting and data processing need to be more repeatable, and electrical integration issues—particularly grounding—complicate use of the rig. The firmware and serial protocol also need verification before acquisition can be considered robust. Proposed next steps include improving wiring and communication reliability, adding sensor channels, and repeating experiments while recording parameters and test conditions.
 
-Un pdf d'explications vis-à-vis du procédé de conception est donné.
+## Démarrage / Getting started
 
-# Conception électronique
+The commands below install the Python packages used by the measurement and analysis notebooks. Run them from the repository root.
 
-Ce dossier contient le travail effectué sur la conception électronique ajoutée au projet. 
-Cela correspond à 2 parties :
-* La remise au gout du jour et de la réalité du schéma de sécurité EDITSAB
-* La conception de la carte filtre passe-bas
+### Prerequisites
 
-A ces 2 taches sont ajoutés des rapports d'activités expliquant le processus de conception.
+- Python 3.10 (the version documented for this project)
+- JupyterLab
+- For live acquisition: the physical rig, an STM32F411 board, STM32CubeIDE 1.12.0 / CubeMX 6.8.7, and a serial connection
 
-### .git
+### Install and launch the notebooks
 
-Fichier spécifique à git, ne pas modifier sans ```$ git ...```.
-
-### /..
-
-La racine du dossier, où se trouve tous les autres documents. 
-Contient :
-
-* **serial_com.ipynb** jupyter notebook pour la communication depuis le PC.
-
-* **.gitignore** document pour git.
-
-
-## Versionnage
-
-STM32CubeIDE : 1.12.0
-STM32CubeIDE/CubeMX : 6.8.7
-
-Python : 3.10
-
-Pour installer tous les packages nécessaires :
-```bash
-pip install 'Documentation codes'/requirements.txt
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install jupyterlab numpy matplotlib scipy pyserial
+jupyter lab
 ```
+
+### Analyze the supplied measurements
+
+Open `5_Post-traitements/1_Libre/analyse_modale_flexion_vfinal.ipynb` in JupyterLab and run its cells in order. The notebook reads the three semicolon-delimited files in `Measurements/`. The files contain time and acceleration samples; no live hardware is needed for this analysis.
+
+For the harmonic case, open `5_Post-traitements/2_Harmonique/analyse_harmonique_flexion_v1.ipynb`. Its model parameters and simulation settings are defined in the notebook.
+
+### Acquire a new measurement
+
+Open `REGLETTE_CMV/REGLETTE_CMV.ioc` in STM32CubeIDE and build/flash the firmware. Then open `serial_com.ipynb` and connect to the board's serial port at **921600 baud** before running its acquisition cells. The current notebook's automatic port detection expects a particular ST-Link description; on Windows, set the correct `COM` port if it is not detected. The measurement guide explains the physical setup and operation: [0_Documents/Sources/tutoriel.md](0_Documents/Sources/tutoriel.md).
+
+Check the emergency stop, power wiring and grounding before operating the motor or electromagnet. Hardware measurements are not reproducible from software dependencies alone.
+
+## Organisation du dépôt / Repository layout
+
+| Path | Contents |
+| --- | --- |
+| `REGLETTE_CMV/` | STM32CubeIDE project, firmware and board configuration |
+| `serial_com.ipynb` | PC-side serial connection, commands and measurement workflow |
+| `Measurements/` | Three sample acceleration time series and CSV helper |
+| `5_Post-traitements/1_Libre/` | Free-response and modal-analysis notebook versions |
+| `5_Post-traitements/2_Harmonique/` | Harmonic-response analysis notebook |
+| `0_Documents/` | Measurement guide, project documents and their sources |
+| `1_Documentation_codes/` | Code documentation and Python serial module requirements |
+| `2_Conception_électronique/` | Electronics design files and activity report |
+| `3_Conception_Mécanique/` | CAD parts, assembly and 3D-print files |
+| `4_Medias/Photos/` | Rig, wiring and analysis images |
