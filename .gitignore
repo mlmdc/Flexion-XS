@@ -1,0 +1,18 @@
+# Ignorer tous les fichiers .log
+*.log
+
+# Ignorer le fichier test.log
+test.log
+
+# Ignorer tous les fichiers .log sous le répertoire "/logs/"
+/logs/*.log
+
+/REGLETTE_Workspace/REGLETTE_CMV/Drivers/
+
+/REGLETTE_Workspace/REGLETTE_CMV/.settings/
+
+/.ipynb_checkpoints/
+
+/__pycache__
+
+

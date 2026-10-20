@@ -1,0 +1,810 @@
+<h1 id="stm32-code-documentation">STM32 Code Documentation</h1>
+<h2 id="architectures-du-projet">Architecture(s) du projet</h2>
+<p>Le projet est basé sur la carte STM32F411, fournie au préalable pour le projet.
+Le but de la carte est principalement celui d&#39;acquérir des mesures, avec un contrôle de certaines parties pour y arriver.
+Il est donc naturellement orienté autour d&#39;une boucle périodique d&#39;acquisition des données suivi de l&#39;envoi des données.
+La partie contrôle se base sur des changements -de valeurs- limités.</p>
+<h4 id="la-boucle-principale">La boucle principale</h4>
+<p>La boucle principale est assurée par le TIM2, à une fréquence de 0.1ms.
+La période est fixée elle par l&#39;utilisateur, à l&#39;aide de tickTimer_Init(uint32_t ms).
+A chaque fin de période, une interruption (dont la priorité est la plus haute) est appelée et c&#39;est là que se situe les appels aux fonctions.</p>
+<pre><code class="language-c">// in main.c
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+    if (htim-&gt;Instance == TIM2){
+        ms_value++; //= HAL_GetTick();
+
+        if ((ms_value % 1) == 0)
+        {
+            ... //code tous les period_ms
+        }
+
+        if ((ms_value % 10) == 0)
+        {
+            ... //code tous les 10*period_ms
+        }
+
+        ... //autres codes
+    }
+}
+</code></pre>
+<h4 id="adc">ADC</h4>
+<p>L&#39;acquisition de l&#39;accéléromètre analogique est assuré par l&#39;ADC (<strong>A</strong>nalog to <strong>D</strong>igital <strong>C</strong>onverter).
+L&#39;appel à la conversion est normalement bloquant si c&#39;est le processeur qui le fait.
+Pour pallier au problème, on utilise le DMA, qui appelle à la conversion, puis transfert dans la mémoire le résultat à l&#39;aide d&#39;une interruption.</p>
+<pre><code class="language-c">// Paramètrages de base
+
+ADC1-&gt;SMPR2 |= (uint32_t)(0x7); //SET SAMPLING TIME TO 480 CYCLES, FCONV = 42.7 kHz, TCONV = 2.342 10^-5 s
+HAL_ADC_Start_DMA (&amp;hadc1, &amp;ADC_DATA_BUFFER, 1);
+
+// Interruption, conversion roulante sur 8 valeurs
+
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
+{
+   acc_rawIntData[conv_index] = ADC_DATA_BUFFER;
+   //ADC1-&gt;CR2 |= ADC_CR2_DDS;
+   conv_index++;
+   if (conv_index &gt;= N_CONVERSIONS)
+   {
+       conv_index = 0;
+   }
+
+}
+
+// code bloquant
+
+void acc_ReadDataBlocking(uint32_t* destination)
+{
+    for (int it = 0; it &lt; (int)N_CONVERSIONS; it++)
+    {
+        //start ADC Conversion
+        HAL_ADC_Start(&amp;hadc1);
+        //fetch value
+        HAL_ADC_PollForConversion(&amp;hadc1, 100);
+        test = HAL_ADC_GetValue(&amp;hadc1);
+        destination[it] = (uint32_t)(0x0000FFFF &amp; HAL_ADC_GetValue(&amp;hadc1));
+        HAL_ADC_Stop(&amp;hadc1);
+    }
+}
+</code></pre>
+<h4 id="le-moteur">Le moteur</h4>
+<p>Le moteur est à la fois un contrôlant et un contrôlé : il y a un encodeur et un PWM.</p>
+<p>Le code de l&#39;encodeur est une modification de <a href="https://web.enib.fr/~kerhoas/quadEncoder.html">celui de M. Kerhoas</a>.
+De même pour le <a href="https://web.enib.fr/~kerhoas/motorCommand.html">code du hacheur</a>.</p>
+<p>Les modifications portées au code de l&#39;encodeur sont les suivantes :</p>
+<ul>
+<li>On se sépare de l&#39;Index pour compter les tours, puisqu&#39;il n&#39;est pas proposé par l&#39;encodeur.</li>
+<li>Un compteur global (au fichier speed.c) le remplace.</li>
+<li>Les fonctions pour l&#39;asservissement ne sont pas prises.</li>
+</ul>
+<p>Les modifications portées au code du PWM sont les suivantes :</p>
+<ul>
+<li>Un degré de précision (0.x) est pris</li>
+<li>Des fonctions plus poussées que simplement le SetDuty sont proposées.</li>
+</ul>
+<p>On rajoute un contrôle de direction sous la forme de 2 signaux logiques directement aux bornes du hacheur.
+Ils sont mutuellement exclusifs.</p>
+<h2 id="documentation">Documentation</h2>
+<h3 id="accelerometerc">accelerometer.c</h3>
+<pre><code class="language-c">void acc_Init(void)
+{
+    /*
+     * Tconv = (Sampling_Time + 12Bits)/(APB2_CLOCK/4) *
+     */
+    /* accelerodata */
+    acc_LastVoltage;
+    acc_zeroG = 1.63f;
+    acc_minusG = 1.93f;
+    acc_plusG = 1.32f;
+    acc_VperG = 0.305f;
+
+    ADC1-&gt;SMPR2 |= (uint32_t)(0x7); //SET SAMPLING TIME TO 480 CYCLES, FCONV = 42.7 kHz, TCONV = 2.342 10^-5 s
+    HAL_ADC_Start_DMA (&amp;hadc1, &amp;ADC_DATA_BUFFER, 1);
+}
+</code></pre>
+<p><strong>Description :</strong>
+    Cette fonction permet de démarrer les conversions.
+    Une modification est portée au registre <strong>SMPR2</strong> pour faire en sorte qu&#39;une conversion prenne 480 coups de cloches. La fréquence passe de 1.75 MHz (ce qui étouffe le processeur avec toutes les interruptions) à 42.7 kHz.</p>
+<p><strong>Paramètres :</strong>
+    <em>None</em></p>
+<p><strong>Retourne :</strong>
+    <em>None</em></p>
+<pre><code class="language-c">void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
+{
+   acc_rawIntData[conv_index] = ADC_DATA_BUFFER;
+   //ADC1-&gt;CR2 |= ADC_CR2_DDS;
+   conv_index++;
+   if (conv_index &gt;= N_CONVERSIONS)
+   {
+       conv_index = 0;
+   }
+
+}
+</code></pre>
+<p><strong>Description :</strong>
+    Après une conversion réussie, le DMA appelle ce Callback pour transférer la valeur dans la mémoire accessible au processeur. Ici, la mémoire est un tableau circulaire de 8 valeurs.</p>
+<p><strong>Paramètres :</strong>
+    hadc : La <em>struct</em> handler de l&#39;ADC</p>
+<p><strong>Retourne :</strong>
+    <em>None</em></p>
+<pre><code class="language-c">void acc_ReadDataBlocking(uint32_t* destination)
+{
+    for (int it = 0; it &lt; (int)N_CONVERSIONS; it++)
+    {
+        //start ADC Conversion
+        HAL_ADC_Start(&amp;hadc1);
+        //fetch value
+        HAL_ADC_PollForConversion(&amp;hadc1, 100);
+        test = HAL_ADC_GetValue(&amp;hadc1);
+        destination[it] = (uint32_t)(0x0000FFFF &amp; HAL_ADC_GetValue(&amp;hadc1));
+        HAL_ADC_Stop(&amp;hadc1);
+    }
+}
+</code></pre>
+<p><strong>Description :</strong>
+    Débute 8 conversions consécutives.
+    Pour chaque conversion, démarre la lecture, attend la fin de la conversion puis transmet la valeur avant de conclure la lecture.</p>
+<p><strong>Paramètres :</strong>
+    destination : Tableau de valeur de destination.</p>
+<p><strong>Retourne :</strong>
+    <em>None</em></p>
+<pre><code class="language-c">/* Converts int 0-4095 to float 0-3.3, representing the voltage */
+void acc_int2flt(uint32_t* source, float* destination)
+{
+    for (int n = 0; n &lt; N_CONVERSIONS; n++)
+    {
+        destination[n] = ((float)(source[n]*10*V_REF)/((float)(MAX_VALUE*10)));
+    }
+}
+</code></pre>
+<p><strong>Description :</strong>
+    Convertis chaque valeur entière d&#39;origine en réel qui représente mieux la valeur.</p>
+<p><strong>Paramètres :</strong>
+    1. source : Tableau de valeurs d&#39;origine, sont les valeurs entières issus de l&#39;ADC.
+    2. destination : Tableau de valeurs convertis en float /valeurs réelles.</p>
+<p><strong>Retourne :</strong>
+    <em>None</em></p>
+<pre><code class="language-c">//For best accuracy
+// The higher the value of alpha, the more closely the EWMA tracks the original time series
+float acc_EWMAverage(float* source, float alpha)
+{
+    //EWMA Formula :
+    //EWMA[x] = alpha*source[x] + (1-alpha)*EWMA[x-1]
+    //EWMA[0] &amp; init
+    float avgd_value = (float)(alpha*source[0])/10.0f;
+
+    for (int i = 1; i &lt; N_CONVERSIONS; i++)
+    {
+            avgd_value = (float)(alpha*source[i]+(1-alpha)*avgd_value);
+    }
+    return avgd_value;
+}
+</code></pre>
+<p><strong>Description :</strong>
+    EWMA pour Exponentially Weighted Moving Average.
+    L&#39;objectif est de donner une moyenne qui prend les derniers résultats avec un plus grand poids par rapport aux premières arrivées. Le nombre de 8 mesures vient de là, il s&#39;agit pour les systèmes binaires d&#39;une valeur n&#39;entraînant pas de sur-calculs.
+    <a href="https://corporatefinanceinstitute.com/resources/career-map/sell-side/capital-markets/exponentially-weighted-moving-average-ewma/">Source</a>.</p>
+<p><strong>Paramètres :</strong>
+    1. source : Tableau de float issus de <em>acc_int2flt</em>.
+    2. alpha : coefficient exponentiel e [0,1]. Plus la valeur est proche de 1, plus le résultat sera proche de la courbe d&#39;origine avec 0 qui donne comme résultat de moyenne 0 et 1 la courbe donnée en paramètre.</p>
+<p><strong>Retourne :</strong>
+    <em>None</em></p>
+<pre><code class="language-c">//example value
+void acc_GetValue(void)
+{
+    acc_int2flt(acc_rawIntData, acc_fltData);
+    acc_LastVoltage = acc_EWMAverage(acc_fltData, 0.5f);
+}
+</code></pre>
+<p><strong>Description :</strong>
+    Fonction principal de <em>accelerometer.c</em>.
+    Appelle à la conversion des entiers en réels (voir acc_int2flt), puis assigne à la valeur globale acc_LastVoltage le résultat de l&#39;EWMA des 8 dernières valeurs.
+    Destinée uniquement à être appelée dans <em>main.c</em>.</p>
+<p><strong>Paramètres :</strong>
+    <em>None</em></p>
+<p><strong>Retourne :</strong>
+    <em>None</em></p>
+<pre><code class="language-c">void acc_Voltage2Accel(void)
+{
+    //Prendre Valeur Voltage
+    acc_GetValue();
+    //acc_LastAccel = ((acc_zeroG-acc_LastVoltage)/acc_VperG);
+    acc_LastAccel = (float)((1.63f-acc_LastVoltage)/0.305f);
+}
+</code></pre>
+<p><strong>Description :</strong>
+Convertis la dernière tension en acceleration selon les paramètres mis dans Init. Ils sont 3 : 
+        La tension à 0G (à vide).
+        La tension à 1G (quand le +x du capteur pointe vers le sol).
+        La tension à -1G (quand le -x du capyeur pointe vers le sol).
+Assigne la valeur globale acc_LastAccel.</p>
+<p><strong>Paramètres :</strong>
+    <em>None</em></p>
+<p><strong>Retourne :</strong>
+    <em>None</em></p>
+<h3 id="pidfilterc">pidFilter.c</h3>
+<pre><code class="language-c">void pidFilter_Init(void)
+{
+    /* PID values */
+    Kp = 0.01216f;
+    Ki = 0.02f;
+    Kd = -0.005f;
+    te_ms = 10;
+    Ti = (Kp/Ki)*(float)te_ms;
+    Td = (Kd/Kp)*(float)te_ms;
+    command = 0.0f;
+    debug_tension = 0.0f;
+
+    /* PID coefficients init */
+
+    b2 = Kp+Kd+Ki;
+    b1 = -2*Kd-Kp;
+    b0 = Kd;
+    a2 = 1;
+    a1 = -1;
+}
+</code></pre>
+<p><strong>Description :</strong>
+    Initialise les valeurs/poids du PID.</p>
+<p><strong>Paramètres :</strong>
+    <em>None</em></p>
+<p><strong>Retourne :</strong>
+    <em>None</em></p>
+<pre><code class="language-c">void pidFilter_SetKp(float new_Kp)
+{
+    Kp = new_Kp;
+}
+</code></pre>
+<p><strong>Description :</strong>
+    Assigne au poids Kp du PID une nouvelle valeur choisie par l&#39;utilisateur.</p>
+<p><strong>Paramètres :</strong>
+    new_Kp : nouvelle valeur en float.</p>
+<p><strong>Retourne :</strong>
+    <em>None</em></p>
+<pre><code class="language-c">void pidFilter_SetKi(float new_Ki)
+{
+    Ki = new_Ki;
+}
+</code></pre>
+<p><strong>Description :</strong>
+    Assigne au poids Ki du PID une nouvelle valeur choisie par l&#39;utilisateur.</p>
+<p><strong>Paramètres :</strong>
+    new_Ki : nouvelle valeur en float.</p>
+<p><strong>Retourne :</strong>
+    <em>None</em></p>
+<pre><code class="language-c">void pidFilter_SetKd(float new_Kd)
+{
+    Kd = new_Kd;
+}
+</code></pre>
+<p><strong>Description :</strong>
+    Assigne au poids Kd du PID une nouvelle valeur choisie par l&#39;utilisateur.</p>
+<p><strong>Paramètres :</strong>
+    new_Kd : nouvelle valeur en float.</p>
+<p><strong>Retourne :</strong>
+    <em>None</em></p>
+<pre><code class="language-c">void pidFilter_SetCommand(float new_command)
+{
+    command = new_command;
+}
+</code></pre>
+<p><strong>Description :</strong>
+    Assigne une nouvelle valeur de commande (vitesse à atteindre) choisie par l&#39;utilisateur.</p>
+<p><strong>Paramètres :</strong>
+    new_command : nouvelle valeur en float, correspond à la vitesse.</p>
+<p><strong>Retourne :</strong>
+    <em>None</em></p>
+<pre><code class="language-c">void pidFilter_SetCommandVoltage(float new_voltage)
+{
+    /* use rated speed of 3000 rpm */
+    float new_command = 280*(new_voltage/12);
+    pidFilter_SetCommand(new_command);
+}
+</code></pre>
+<p><strong>Description :</strong>
+    Assigne une nouvelle valeur de commande choisie par l&#39;utilisateur.
+    Contrairement à SetCommand, la nouvelle commande est déduite d&#39;une valeur de tension voulue à l&#39;entrée du moteur. Le calcul prend la tension et la vitesse nominales du moteur.</p>
+<p><strong>Paramètres :</strong>
+    new_voltage : nouvelle valeur en float.</p>
+<p><strong>Retourne :</strong>
+    <em>None</em></p>
+<pre><code class="language-c">void pidFilter_SetOuterSpeedCommand(float new_speed)
+{
+    /* 0 &lt;= new_speed &lt;= 3800/15.88 */
+    pidFilter_SetCommand(new_speed*15.88f);
+}
+</code></pre>
+<p><strong>Description :</strong>
+    Assigne une nouvelle valeur de commande choisie par l&#39;utilisateur.
+    Contrairement à SetCommand, la nouvelle commande est déduite d&#39;une valeur de vitesse après le reducteur. C&#39;est tout naturellement que cette valeur soit multiplié par le rapport du réducteur.</p>
+<p><strong>Paramètres :</strong>
+    new_Kp : nouvelle valeur en float. Faire attention à ce que la valeur choisie soit inférieur ou égale à la vitesse nominale divisée par le rapport du réducteur.</p>
+<p><strong>Retourne :</strong>
+    <em>None</em></p>
+<pre><code class="language-c">void pidFilter_SetFrequency(float freq)
+{
+    float new_command = 60.0f*(freq/(float)TS_BY_TE);
+    pidFilter_SetCommand(new_command);
+}
+</code></pre>
+<p><strong>Description :</strong>
+    Assigne une nouvelle valeur de commande choisie par l&#39;utilisateur.
+    Contrairement à SetCommand, la nouvelle commande est déduite d&#39;une fréquence de rotation du moteur. Cette fréquence correspond au nombre de rotations par seconde (càd RPM/60).</p>
+<p><strong>Paramètres :</strong>
+    new_Kp : nouvelle valeur en float. Faire attention à ce que la valeur choisie soit inférieur ou égale à la vitesse nominale divisée par 60.</p>
+<p><strong>Retourne :</strong>
+    <em>None</em></p>
+<pre><code class="language-c">void pidFilter_Compute(void)
+{
+    /* set k-1 */
+    Oe_k[2] = Oe_k[1];
+    Oe_k[1] = Oe_k[0];
+    Oe_k[0] = command - (float)fabs(output_speed);
+
+    Uc_k[1] = Uc_k[0];
+
+    /* calculate Uc(z) */
+    Uc_k[0] = (b2/a2)*Oe_k[0] + (b1/a2)*Oe_k[1] + (b0/a2)*Oe_k[2] - (a1/a2)*Uc_k[1];
+
+    /* no negative voltage */
+    if (Uc_k[0] &lt; 0.0f)
+    {
+        Uc_k[0] = 0.0f;
+    }
+    else if (Uc_k[0] &gt; 24.0f) /* no voltage superior to 24, both as a command &amp; status*/
+    {
+        Uc_k[0] = 24.0f;
+    }
+    /* PWM new duty */
+    pwm_SetVoltage(Uc_k[0]);
+
+    debug_tension = Uc_k[0];
+}
+</code></pre>
+<p><strong>Description :</strong>
+Fonction principale de ce fichier.
+Calcule à partir des paramètres du PID (Kp, Kd, Ki) la <strong>tension</strong> de sortie aux bornes du moteur. La formule de Uc_k[0] est simplement le résultat du développement de la formule initiale du PID, puis de sa conversion dans l&#39;espace discret.
+<em>fabs()</em> est utilisée puisque seul la vitesse compte dans le calcul, le signe donne par contre la direction (controlée dans mccCommand.c). Destinée uniquement à être appelée dans <em>main.c</em> </p>
+<p><strong>Paramètres :</strong>
+    <em>None</em></p>
+<p><strong>Retourne :</strong>
+    <em>None</em></p>
+<h3 id="mcccommandc">mccCommand.c</h3>
+<pre><code class="language-c">void mcc_SetCW(void)
+{
+    HAL_GPIO_WritePin(GPIOA,GPIO_PIN_9, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(GPIOA,GPIO_PIN_8, GPIO_PIN_RESET);
+    isCW = 1;
+}
+</code></pre>
+<p><strong>Description :</strong>
+    Fonction de bas niveau qui met le moteur en rotation horaire (ClockWise).</p>
+<p><strong>Paramètres :</strong>
+    <em>None</em></p>
+<p><strong>Retourne :</strong>
+    <em>None</em></p>
+<pre><code class="language-c">void mcc_SetCCW(void)
+{
+    HAL_GPIO_WritePin(GPIOA,GPIO_PIN_9, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOA,GPIO_PIN_8, GPIO_PIN_SET);
+    isCW = 0;
+}
+</code></pre>
+<p><strong>Description :</strong>
+    Fonction de bas niveau qui met le moteur en rotation anti-horaire (CounterClockWise).</p>
+<p><strong>Paramètres :</strong>
+    <em>None</em></p>
+<p><strong>Retourne :</strong>
+    <em>None</em></p>
+<pre><code class="language-c">void mcc_SetMagnet(int state)
+{
+    if (state == 1)
+    {
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_SET);
+        isMagOn = 1;
+    }
+    else
+    {
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_RESET);
+        isMagOn = 0;
+    }
+
+}
+</code></pre>
+<p><strong>Description :</strong>
+    Fonction de commande qui choisie l&#39;état de rotation du moteur.</p>
+<p><strong>Paramètres :</strong>
+    state : Int de valeur 1 ou 0.</p>
+<p><strong>Retourne :</strong>
+    <em>None</em></p>
+<pre><code class="language-c">void mcc_ToggleDir(void)
+{
+    if (isCW == 0)
+    {
+        mcc_SetCCW();
+        isCW = 1;
+    }
+    else
+    {
+        mcc_SetCW();
+        isCW = 0;
+    }
+
+}
+</code></pre>
+<p><strong>Description :</strong>
+    Fonction de contrôle qui inverse le sens de rotation du moteur.</p>
+<p><strong>Paramètres :</strong>
+    <em>None</em></p>
+<p><strong>Retourne :</strong>
+    <em>None</em></p>
+<h3 id="pwmcommandc">pwmCommand.c</h3>
+<pre><code class="language-c">uint32_t pulseCalc(float val)
+{
+    uint32_t pulseVal = 0;
+
+    if (val &lt; 0.0f)
+    {
+        //If val inf to 0, pulseVal = 0
+        pulseVal = (uint32_t)(0x0);
+    }
+    else if (val &gt; 100.0f)
+    {
+        //If val sup to 100, pulseVal = 1000
+        pulseVal = (uint32_t)(0x3E8);
+    }
+    else if ((val &gt;= 0.0f) &amp; (val &lt;= 100.0f))
+    {
+        /* CCR = duty_cycle*ARR &lt;=&gt; CCR = duty_cycle * 100 * ARR(1000)  /100.0f*/
+        pulseVal = (uint32_t)(10*val*(1000)/100.0f); // val*10 to keep 0.x precision
+        pulseVal = pulseVal/10; // val/10 to be on point
+    }
+    return pulseVal;
+}
+</code></pre>
+<p><strong>Description :</strong>
+Produit à partir d&#39;une valeur de pulsation allant de 0.0 a 100.0 la valeur de CCR1 correspondante. Contient en plus de cela une sécurité sous la forme d&#39;assignements à 0 ou 100 si la valeur en entrée dépasse ces 2 bornes.</p>
+<p><strong>Paramètres :</strong>
+    val : float correspondant à la valeur de commande. Va de 0.0 à 100.0.</p>
+<p><strong>Retourne :</strong>
+    La valeur de <strong>val</strong> multipliée par 10, puis castée en <em>uint32_t</em>.</p>
+<pre><code class="language-c">void pwm_Init(void){
+
+    PWM_Toggle = 0;
+    PWM_Value = 0;
+    TIM11-&gt;CCR1 = 10;
+    HAL_TIM_PWM_Start(&amp;htim11, TIM_CHANNEL_1);
+}
+</code></pre>
+<p><strong>Description :</strong>
+Initialise le PWM du moteur ainsi que les variables PWM_Toggle et PWM_Value. Lance ensuite la génération du signal PWM via HAL.</p>
+<p><strong>Paramètres :</strong>
+    <em>None</em></p>
+<p><strong>Retourne :</strong>
+    <em>None</em></p>
+<pre><code class="language-c">void pwm_SetDuty(float duty) //
+{
+    //Formula duty : Pulse Value = duty*(2^16 - 1)/100
+    //Float = 32bits
+
+    //__HAL_TIM_SetCompare(&amp;htim3, TIM_CHANNEL_1, pulseCalc(duty));
+    PWM_Value = pulseCalc(duty);
+    TIM11-&gt;CCR1 = PWM_Value;
+}
+</code></pre>
+<p><strong>Description :</strong>
+    Définie la valeur du registre CCR1, qui est le registre de référence pour définir l&#39;état logique de sortie du PWM. Le signal est haut tant que le compte du TIM11 est inférieur ou égal à CCR1. Fait usage de pulseCalc pour la transformation d&#39;un float en valeur utilisable.</p>
+<p><strong>Paramètres :</strong>
+    duty : Valeur de duty cycle qui sera utilisée. Allant de 0.0 à 100.0.</p>
+<p><strong>Retourne :</strong>
+    <em>None</em></p>
+<pre><code class="language-c">
+void pwm_SetVoltage(float voltage)
+{
+    // Voltage e [0.0,24.0]
+    float duty = 0;
+
+    if (voltage &lt; 0.0f)
+    {
+        //If val inf to 0, duty = 0
+        duty = 0.0f;
+    }
+    else if (voltage &gt; 24.0f)
+    {
+        //If val sup to 24, duty = 100
+        duty = 24.0f;
+    }
+    else if ((voltage &gt;= 0.0f) &amp; (voltage &lt;= 24.0f))
+    {
+        duty = (voltage*100.0f)/(24.0f);
+    }
+    PWM_Value = pulseCalc(duty);
+    TIM11-&gt;CCR1 = PWM_Value;
+}
+</code></pre>
+<p><strong>Description :</strong>
+    Définie la valeur du duty cycle, non pas à partir d&#39;un pourcentage mais d&#39;une tension. Une seconde sécurité est mise en place sous la forme d&#39;un anti-dépassement de la tension max du moteur.</p>
+<p><strong>Paramètres :</strong>
+    voltage : Valeur de tension dont sera issue le duty cycle. En float pour permettre de la précision qui peut être cependant supprimée par le passage en int.</p>
+<p><strong>Retourne :</strong>
+    <em>None</em></p>
+<pre><code class="language-c">void pwm_Enable(void)
+{
+    HAL_TIM_PWM_Start(&amp;htim11, TIM_CHANNEL_1);
+    PWM_Toggle = 1;
+}
+</code></pre>
+<p><strong>Description :</strong>
+    Fonction de bas niveau qui autorise l&#39;émission du PWM.</p>
+<p><strong>Paramètres :</strong>
+    <em>None</em></p>
+<p><strong>Retourne :</strong>
+    <em>None</em></p>
+<pre><code class="language-c">void pwm_Disable(void)
+{
+    HAL_TIM_PWM_Stop(&amp;htim11, TIM_CHANNEL_1);
+    PWM_Toggle = 0;
+}
+</code></pre>
+<p><strong>Description :</strong>
+    Fonction de bas niveau qui bloque l&#39;émission du PWM.</p>
+<p><strong>Paramètres :</strong>
+    <em>None</em></p>
+<p><strong>Retourne :</strong>
+    <em>None</em></p>
+<pre><code class="language-c">void pwm_Toggle(void)
+{
+    /*PWM_Toggle :
+    * 0 = Off
+    * 1 = On
+    */
+    if (PWM_Toggle == 0)
+    {
+        pwm_Enable();
+        PWM_Toggle = 1;
+    }
+    else
+    {
+        pwm_Disable();
+        PWM_Toggle = 0;
+    }
+}
+</code></pre>
+<p><strong>Description :</strong>
+    Fonction qui inverse l&#39;état de l&#39;émission du PWM.</p>
+<p><strong>Paramètres :</strong>
+    <em>None</em></p>
+<p><strong>Retourne :</strong>
+    <em>None</em></p>
+<h3 id="commc">comm.c</h3>
+<pre><code class="language-c">void slice_str(const char * str, char * buffer, size_t start, size_t end)
+{
+    size_t j = 0;
+    for ( size_t i = start; i &lt;= end; ++i ) {
+        buffer[j++] = str[i];
+    }
+    buffer[j] = 0;
+}
+</code></pre>
+<p><strong>Description :</strong>
+Découpe un string dont le début du découpage est <em>start</em> et la fin du découpage est <em>stop</em>. Le résultat n&#39;est pas renvoyé, ni même la quantité de caractères traités. Dépose le résultat dans <em>buffer</em>.</p>
+<p><strong>Paramètres :</strong>
+    - str : String (pointeur de char) issu d&#39;une variable OU directement mis en entrée avec &quot;...&quot;.
+    - buffer : String où le résultat est remis.
+    - start : N&#39;importe quel entier d&#39;où le découpage démarre.
+    - stop : N&#39;importe quel entier où se finit le découpage. A noter que si <em>end</em> est supérieur ou égal au nombre de caractères de str, alors end ne fait pas effet.</p>
+<p><strong>Retourne :</strong>
+    <em>None</em></p>
+<pre><code class="language-c">char * slice_str_r(const char * str, size_t start, size_t end)
+{
+    char * buffer;
+    size_t j = 0;
+    for (size_t i = start; i &lt;= end; ++i ) {
+          buffer[j++] = str[i];
+    }
+    buffer[j] = 0;
+    return buffer;
+}
+</code></pre>
+<p><strong>Description :</strong>
+Découpe un string dont le début du découpage est <em>start</em> et la fin du découpage est <em>stop</em>. Le résultat est <strong>renvoyé</strong>, sous forme d&#39;un tableau de caractères complet.</p>
+<p><strong>Paramètres :</strong>
+    - str : String (pointeur de char) issu d&#39;une variable OU directement mis en entrée avec &quot;...&quot;.
+    - start : N&#39;importe quel entier d&#39;où le découpage démarre.
+    - stop : N&#39;importe quel entier où se finit le découpage.</p>
+<p><strong>Retourne :</strong>
+    char * dont la taille (en nombre de caractères) est exactement celle de <em>end - start</em>.</p>
+<pre><code class="language-c">uint8_t get_used_bytes(const char *source)
+{
+    for (int i = 0; i &lt; 64; i++)
+    {
+        if (source[i] == &#39;\r&#39;)
+        {
+            return i;
+        }
+    }
+    return 0;
+}
+</code></pre>
+<p><strong>Description :</strong>
+Donne le nombre de caractères qui sont réellement utilisés dans un tableau de caractères. La fin d&#39;un tableau est signalée par un caractère EOL.</p>
+<p><strong>Paramètres :</strong>
+    source : Tableau analysé.</p>
+<p><strong>Retourne :</strong>
+    Taille en entier du nombre de caractères utilisés.</p>
+<pre><code class="language-c">void comm_SendData(uint32_t msvalue)
+{
+    //DATA_FORMAT : tx_data[x] = [ID_TX_TypeOfData]+[TypeOfData_0]+...+[TypeOfData_n]+[ID_TX_TypeOfData...]+...
+
+    sprintf(tx_data,&quot;%s;%i;%s;%.3f;%s;%.3f;%s;%i;%s;%.2f;\n\r&quot;, //Only 1 line for sprintf
+            ID_TX_TIME, (int)HAL_GetTick(),//msvalue,
+            ID_TX_ADC, acc_LastVoltage,
+            ID_TX_ACC, acc_LastAccel,
+            ID_TX_PWM, (int)PWM_Value,
+            ID_TX_RPM, output_speed);
+
+    uint8_t used_len = get_used_bytes(tx_data);
+
+    HAL_UART_Transmit_DMA(&amp;huart2,
+            (uint8_t *)slice_str_r(tx_data, 0, used_len+2),
+            (used_len+2));
+}
+</code></pre>
+<p><strong>Description :</strong>
+Fonction principale du module <strong>comm.c</strong>.
+Récupère les données, y associe des identifiants puis envoie les données.
+Fait appel à <em>get_used_bytes()</em> pour déterminer la quantité de données à transmettre et ainsi ne transmettre que cette quantité, suivi de <em>slice_str_r</em> pour découper. S&#39;appuie sur sprintf pour produire un string prêt à l&#39;émission, puis l&#39;émêt via DMA. Cette association permet de passer sous les 1ms de temps d&#39;exécution pour cette fonction.</p>
+<p><strong>Paramètres :</strong>
+    ms_value : uint32_t correspondant au temps de l&#39;appel de la fonction pour l&#39;émission de données.</p>
+<p><strong>Retourne :</strong>
+    <em>None</em></p>
+<pre><code class="language-c">void comm_SliceInput(const char * input, char * identifier, char *value)
+{
+    char tmp_value[RX_BUFFER_SIZE-4];
+    char *tmp_slice;
+    char *tmp_out_value;
+    /* Slice input string from 0 to 3 == the identifier of shape 0xXX */
+    slice_str(input, identifier, 0, 3);
+
+    /* Slice input string from 5 to buffer size -1 == the value*/
+    slice_str(input, tmp_value, 4, RX_BUFFER_SIZE-1); // rest of the string
+
+    /* cast from char*[RX_BUFFER_SIZE-4], incompatible with strsep, to char * */
+    tmp_slice = (char *)tmp_value;
+    /* SEParate the string with ; as delimiter, keeps the string before ; */
+    tmp_out_value = strsep(&amp;tmp_slice, &quot;;&quot;);
+    strcpy(value,tmp_out_value);
+}
+</code></pre>
+<p><strong>Description :</strong>
+    Fonction utilisé à la réception d&#39;une trame depuis le PC.
+    A partir de <em>input</em>, découpe <em>identifier</em> et <em>value</em>.</p>
+<p><strong>Paramètres :</strong>
+    - input : String reçu, sans taille.
+    - identifier : Variable externe à la fonction sensée recevoir l&#39;identifiant du message.
+    - value : Variable externe sensée recevoir la valeur du message. </p>
+<p><strong>Retourne :</strong>
+    <em>None</em></p>
+<pre><code class="language-c">void comm_ComputeInput(char * identifier, char * value)
+{
+    /*
+     * str 1 == str 2 compare the address
+     * strcmp(str1,str2) compare the content
+     */
+    if (strcmp(identifier,ID_RX_ACK) == 0)
+    {
+        comm_ack = 1;
+    }
+    else if (strcmp(identifier,ID_RX_START) == 0)
+    {
+        comm_start = 1;
+        tickTimer_Start();
+        comm_start = 0;
+    }
+    else if (strcmp(identifier,ID_RX_STOP) == 0)
+        {
+            comm_start = 1;
+            tickTimer_Stop();
+            comm_start = 0;
+        }
+    else if (strcmp(identifier,ID_RX_CALIBRATE) == 0)
+    {
+        comm_ack = 0;
+        //acc_Calibrate();
+    }
+    else if (strcmp(identifier,ID_RX_CALIB_ZEROG) == 0)
+    {
+        comm_ack = 0;
+        //acc_CalibrationZeroG();
+    }
+    else if (strcmp(identifier,ID_RX_CALIB_MINUSG) == 0)
+    {
+        comm_ack = 0;
+        //acc_CalibrationMinusG();
+    }
+    else if (strcmp(identifier,ID_RX_CALIB_PLUSG) == 0)
+    {
+        comm_ack = 0;
+        //acc_CalibrationPlusG();
+    }
+    else if (strcmp(identifier,ID_RX_STOP) == 0)
+    {
+        comm_stop = 1;
+        tickTimer_Stop();
+        comm_stop = 0;
+    }
+    else if (strcmp(identifier,ID_RX_PWM_START) == 0)
+    {
+        pwm_Enable();
+    }
+    else if (strcmp(identifier,ID_RX_PWM_STOP) == 0)
+    {
+        pwm_Disable();
+    }
+    else if (strcmp(identifier,ID_RX_DUTY_SET) == 0)
+    {
+        /* Data sanitization done in SetVoltage */
+        pwm_SetDuty((float)atof(value));
+    }
+    else if (strcmp(identifier,ID_RX_DIR) == 0)
+    {
+        int tmp_dir = atoi(value);
+        /* data sanitization */
+        if (tmp_dir &lt; 0)
+        {
+            tmp_dir = 0;
+        }
+        else if (tmp_dir &gt; 1)
+        {
+            tmp_dir = 1;
+        }
+        /* Change of direction */
+        if (tmp_dir == 0)
+        {
+                mcc_SetCCW();
+        }
+        else
+        {
+                mcc_SetCW();
+        }
+    }
+    else if (strcmp(identifier,ID_RX_VOLTAGE_SET) == 0)
+    {
+        /* Data sanitization done in SetVoltage */
+        pwm_SetVoltage((float)atof(value));
+    }
+    else if (strcmp(identifier,ID_RX_SET_KP) == 0)
+    {
+        /* No data sanitization */
+        pidFilter_SetKp((float)atof(value));
+    }
+    else if (strcmp(identifier,ID_RX_SET_KI) == 0)
+    {
+        /* No data sanitization */
+        pidFilter_SetKi((float)atof(value));
+    }
+    else if (strcmp(identifier,ID_RX_SET_KD) == 0)
+    {
+        /* No data sanitization */
+        pidFilter_SetKd((float)atof(value));
+    }
+    else if (strcmp(identifier,ID_RX_SET_MAG) == 0)
+        {
+            /* No data sanitization */
+            mcc_SetMagnet(atoi(value));
+        }
+    else
+    {
+
+    }
+}
+</code></pre>
+<p><strong>Description :</strong>
+Fonction de réaction appelée à la suite de <em>comm_SliceInput()</em>.
+En fonction de l&#39;identifiant, appelle la fonction correspondante à la fonctionnalité souhaitée. Utilise <em>strcmp()</em> pour choisir quelle réaction adopter, puisque cette fonction est très souple. <em>value</em> est utilisée si et si seulement la fonction est demandée.</p>
+<p><strong>Paramètres :</strong>
+    - identifier : Identifiant du message. String.
+    - value : Valeur. String</p>
+<p><strong>Retourne :</strong>
+    <em>None</em></p>
