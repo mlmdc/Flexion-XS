@@ -52,6 +52,10 @@ For free response, the notebooks derive frequency-response functions from accele
 
 ## Choix techniques / Technical decisions
 
+<p align="center">
+  <img src="0_Documents/Sources/images/schema_maquette.png" alt="System overview showing the PC, STM32, sensor, motor and power electronics" width="450">
+</p>
+
 🇫🇷 **FR :**
 - **STM32F411 et HAL en C :** la carte regroupe l’acquisition ADC, l’encodeur moteur, la commande PWM et la liaison série. Le DMA et les interruptions périodiques limitent le travail bloquant pendant l’acquisition.
 - **Accéléromètre analogique et encodeur :** ils permettent d’observer la réponse de la réglette et la vitesse d’excitation avec l’électronique disponible. L’acquisition actuelle repose sur un seul canal d’accéléromètre.
@@ -67,14 +71,6 @@ For free response, the notebooks derive frequency-response functions from accele
 - **921600-baud UART and text frames:** delimited values are straightforward to inspect and process in Python, at the cost of transmission overhead and synchronization constraints.
 - **Python, NumPy, SciPy and notebooks:** separating acquisition from post-processing allows analysis methods to be explored without changing the firmware. The analyses use manually selected ranges and parameters, so they are not a fully automated pipeline.
 - **Finite-element model:** the notebooks use a discretized Euler–Bernoulli beam model to compare frequencies and mode shapes. It simplifies the physical rig and its boundary conditions.
-
-### Hardware and signal chain
-
-<img src="0_Documents/Sources/images/schema_maquette.png" alt="System overview showing the PC, STM32, sensor, motor and power electronics" width="850">
-
-<img src="4_Medias/Photos/branchement_accel.jpg" alt="Accelerometer mounted on the beam beside a ruler" width="850">
-
-<img src="4_Medias/Photos/cablage_filtre_accel.jpg" alt="Accelerometer signal-conditioning circuit and STM32 wiring" width="850">
 
 ## Résultats et apprentissages / Results & learnings
 
