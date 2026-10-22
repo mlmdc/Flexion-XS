@@ -68,6 +68,14 @@ For free response, the notebooks derive frequency-response functions from accele
 - **Python, NumPy, SciPy and notebooks:** separating acquisition from post-processing allows analysis methods to be explored without changing the firmware. The analyses use manually selected ranges and parameters, so they are not a fully automated pipeline.
 - **Finite-element model:** the notebooks use a discretized Euler–Bernoulli beam model to compare frequencies and mode shapes. It simplifies the physical rig and its boundary conditions.
 
+### Hardware and signal chain
+
+<img src="0_Documents/Sources/images/schema_maquette.png" alt="System overview showing the PC, STM32, sensor, motor and power electronics" width="850">
+
+<img src="4_Medias/Photos/branchement_accel.jpg" alt="Accelerometer mounted on the beam beside a ruler" width="850">
+
+<img src="4_Medias/Photos/cablage_filtre_accel.jpg" alt="Accelerometer signal-conditioning circuit and STM32 wiring" width="850">
+
 ## Résultats et apprentissages / Results & learnings
 
 🇫🇷 **FR -** Le dépôt contient trois séries de mesures (`P1FRF.csv`, `P2FRF.csv`, `P3FRF.csv`) et des notebooks qui produisent des réponses fréquentielles et des comparaisons modales. Les fichiers documentent une chaîne expérimentale et des méthodes d’analyse utilisables comme base de travail ; ils ne suffisent pas, à eux seuls, à établir une validation quantitative du modèle ou une précision générale des estimations.
