@@ -6,7 +6,7 @@
 
 🇬🇧 **EN -** **Measure the vibrations of a bending beam and compare its observed frequencies and mode shapes with a mechanical model.**
 
-[Retour au portfolio / Back to portfolio](https://github.com/mlmdc) · [Sommaire / Contents](#sommaire--contents) · [Tutoriel de mesure / Measurement guide](0_Documents/Sources/tutoriel.md) · [Projet STM32](REGLETTE_CMV/REGLETTE_CMV.ioc) · [Analyse modale / Modal analysis](5_Post-traitements/1_Libre/analyse_modale_flexion_vfinal.ipynb)
+[Retour au portfolio / Back to portfolio](https://mlmdc.github.io/mlmdc_portfolio/) · [Sommaire / Contents](#sommaire--contents)
 
 ![Montage expérimental Flexion XS : réglette, moteur et électronique de mesure](4_Medias/Photos/montage_moteur_sans_reducteur.jpg)
 
