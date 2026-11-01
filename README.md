@@ -73,6 +73,18 @@ For free response, the notebooks derive frequency-response functions from accele
 
 ## Résultats et apprentissages / Results & learnings
 
+<img src="4_Medias/Photos/mesure_p1.png" alt="Measured free-response acceleration over time" width="70%">
+
+<p><em>FR : Décroissance de l’accélération après l’excitation. / EN: Acceleration decay after excitation.</em></p>
+
+<img src="4_Medias/Photos/modale_propre_2031.png" alt="Frequency-response functions from three measurement positions" width="70%">
+
+<p><em>FR : Réponses fréquentielles mesurées en trois positions. / EN: Frequency responses measured at three positions.</em></p>
+
+<img src="4_Medias/Photos/deformee_mesure_2031.png" alt="Comparison of measured and modeled mode shapes" width="70%">
+
+<p><em>FR : Comparaison des formes modales mesurées et modélisées. / EN: Comparison of measured and modeled mode shapes.</em></p>
+
 🇫🇷 **FR -** Le dépôt contient trois séries de mesures (`P1FRF.csv`, `P2FRF.csv`, `P3FRF.csv`) et des notebooks qui produisent des réponses fréquentielles et des comparaisons modales. Les fichiers documentent une chaîne expérimentale et des méthodes d’analyse utilisables comme base de travail ; ils ne suffisent pas, à eux seuls, à établir une validation quantitative du modèle ou une précision générale des estimations.
 
 Les documents du projet signalent plusieurs limites encore ouvertes : le troisième mode en régime libre reste à mieux identifier, l’ajustement des cercles et le traitement doivent gagner en répétabilité, et des problèmes d’intégration électrique (notamment de masses) compliquent l’utilisation de la maquette. Le firmware et le protocole série nécessitent également une vérification avant de considérer l’acquisition comme robuste. Les évolutions proposées comprennent la fiabilisation du câblage et de la communication, une acquisition multi-capteurs et des essais répétés avec paramètres et conditions consignés.
@@ -82,12 +94,6 @@ Les documents du projet signalent plusieurs limites encore ouvertes : le troisi�
 🇬🇧 **EN -** The repository includes three measurement series (`P1FRF.csv`, `P2FRF.csv`, `P3FRF.csv`) and notebooks that compute frequency responses and compare mode shapes. They document an experimental workflow and analysis methods that can be extended; by themselves, they do not establish quantitative model validation or general accuracy of the estimates.
 
 The project documents identify open limitations: the third free-response mode needs better identification, circle fitting and data processing need to be more repeatable, and electrical integration issues—particularly grounding—complicate use of the rig. The firmware and serial protocol also need verification before acquisition can be considered robust. Proposed next steps include improving wiring and communication reliability, adding sensor channels, and repeating experiments while recording parameters and test conditions.
-
-<img src="4_Medias/Photos/mesure_p1.png" alt="Measured free-response acceleration over time" width="70%">
-
-<img src="4_Medias/Photos/modale_propre_2031.png" alt="Frequency-response functions from three measurement positions" width="70%">
-
-<img src="4_Medias/Photos/deformee_mesure_2031.png" alt="Comparison of measured and modeled mode shapes" width="70%">
 
 ## Getting started
 
