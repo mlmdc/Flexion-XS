@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="4_Medias/Photos/flexion_xs_icons.png" alt="Maquette Flexion XS" width="70%">
+  <img src="4_Medias/Photos/flexion_xs_icons.png" alt="Maquette Flexion XS" width="80%">
 </p>
 
 <h1 align="center">Flexion XS</h1>
@@ -27,9 +27,7 @@
 🇫🇷 **FR -** Flexion XS est une plateforme expérimentale pédagogique consacrée aux vibrations d’une réglette assimilée à une poutre. Une carte STM32 acquiert l’accélération d’un accéléromètre analogique et la vitesse d’un moteur ; un programme Python permet de commander la maquette et de recevoir les mesures. Les notebooks exploitent ensuite des mesures en plusieurs points pour étudier les fréquences propres, les formes modales et l’amortissement, et les comparer à un modèle de poutre.
 
 Le dépôt s’adresse aux étudiants et aux personnes qui reprennent le projet : il rassemble le firmware, l’outil de mesure, des données, des analyses et les documents de conception. Une acquisition en direct nécessite la maquette et sa carte STM32.
-
 <br>
-
 🇬🇧 **EN -** Flexion XS is an educational experimental platform for studying the vibrations of a beam-like strip. An STM32 board samples an analog accelerometer and reads motor speed; a Python program controls the rig and receives measurements. Notebooks then use measurements taken at several positions to study natural frequencies, mode shapes and damping, and compare them with a beam model.
 
 The repository is intended for students and project maintainers. It contains the firmware, measurement tools, sample data, analysis notebooks and design documents. Live acquisition requires the physical rig and its STM32 board.
@@ -54,7 +52,7 @@ For free response, the notebooks derive frequency-response functions from accele
 ## Choix techniques / Technical decisions
 
 <p align="center">
-  <img src="0_Documents/Sources/images/schema_maquette.png" alt="System overview showing the PC, STM32, sensor, motor and power electronics" width="450">
+  <img src="4_Medias/Photos/schema_maquette.png" alt="System overview showing the PC, STM32, sensor, motor and power electronics" width="450">
 </p>
 
 🇫🇷 **FR :**
