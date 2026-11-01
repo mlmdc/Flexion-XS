@@ -1,15 +1,16 @@
-<div align="center">
+<p align="center">
+  <img src="4_Medias/Photos/flexion_xs_icons.png" alt="Maquette Flexion XS" width="70%">
+</p>
 
-# Flexion XS
+<h1 align="center">Flexion XS</h1>
 
-🇫🇷 **FR -** **Mesurer les vibrations d’une réglette en flexion et confronter les fréquences et modes observés à un modèle mécanique.**
+<p align="left">
+  <strong>🇬🇧 EN - </strong> Measure the vibrations of a bending beam and compare its observed frequencies and mode shapes with a mechanical model.<br>
+  <strong>🇫🇷 FR - </strong> Mesurer les vibrations d’une réglette en flexion et confronter les fréquences et modes observés à un modèle mécanique.
+</p>
 
-🇬🇧 **EN -** **Measure the vibrations of a bending beam and compare its observed frequencies and mode shapes with a mechanical model.**
 
 [Retour au portfolio / Back to portfolio](https://mlmdc.github.io/mlmdc_portfolio/) · [Sommaire / Contents](#sommaire--contents)
-
-![Montage expérimental Flexion XS : réglette, moteur et électronique de mesure](4_Medias/Photos/montage_moteur_sans_reducteur.jpg)
-
 </div>
 
 ## Sommaire / Contents
