@@ -75,15 +75,15 @@ For free response, the notebooks derive frequency-response functions from accele
 
 <img src="4_Medias/Photos/mesure_p1.png" alt="Measured free-response acceleration over time" width="70%">
 
-<p><em>FR : Décroissance de l’accélération après l’excitation. / EN: Acceleration decay after excitation.</em></p>
+<p><em>FR : Décroissance de l’accélération après l’excitation. <br> EN: Acceleration decay after excitation.</em></p>
 
 <img src="4_Medias/Photos/modale_propre_2031.png" alt="Frequency-response functions from three measurement positions" width="70%">
 
-<p><em>FR : Réponses fréquentielles mesurées en trois positions. / EN: Frequency responses measured at three positions.</em></p>
+<p><em>FR : Réponses fréquentielles mesurées en trois positions. <br> EN: Frequency responses measured at three positions.</em></p>
 
 <img src="4_Medias/Photos/deformee_mesure_2031.png" alt="Comparison of measured and modeled mode shapes" width="70%">
 
-<p><em>FR : Comparaison des formes modales mesurées et modélisées. / EN: Comparison of measured and modeled mode shapes.</em></p>
+<p><em>FR : Comparaison des formes modales mesurées et modélisées. <br> EN: Comparison of measured and modeled mode shapes.</em></p>
 
 🇫🇷 **FR -** Le dépôt contient trois séries de mesures (`P1FRF.csv`, `P2FRF.csv`, `P3FRF.csv`) et des notebooks qui produisent des réponses fréquentielles et des comparaisons modales. Les fichiers documentent une chaîne expérimentale et des méthodes d’analyse utilisables comme base de travail ; ils ne suffisent pas, à eux seuls, à établir une validation quantitative du modèle ou une précision générale des estimations.
 
